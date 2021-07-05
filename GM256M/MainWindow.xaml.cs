@@ -32,6 +32,8 @@ namespace GM256M
         string in_path = "nothing";
         string out_path = "nothing";
         bool stop = false;
+        long polyphony = 0;
+        long tempPoly = 0;
 
         public MainWindow()
         {
@@ -39,12 +41,15 @@ namespace GM256M
         }
         void resetState()
         {
+            //Reset everything to their default values
             in_path = "";
             out_path = "";
-            progressBar.Maximum = 0;
+            progressBar.Maximum = 1;
             progressBar.Value = 0;
+            Status.Content = "Doing Nothing";
             isNull = true;
             isNull2 = true;
+            checkPoly.IsEnabled = false;
 
         }
         private void Button_Click(object sender, RoutedEventArgs e)
@@ -52,7 +57,7 @@ namespace GM256M
             OpenFileDialog theDialog = new OpenFileDialog();
             theDialog.Title = "Load MIDI File";
             theDialog.Filter = "MIDI Files|*.mid";
-            theDialog.InitialDirectory = @"C:\";
+            theDialog.RestoreDirectory = true;
             theDialog.ShowDialog();
             in_path = theDialog.FileName;
             if (in_path == "")
@@ -65,11 +70,13 @@ namespace GM256M
             if (isNull == false)
             {
                 start.IsEnabled = true;
+                checkPoly.IsEnabled = true;
                 midiName1.Content = in_path;
             }
             else
             {
                 midiName1.Content = "{Select MIDI}";
+                checkPoly.IsEnabled = false;
                 start.IsEnabled = false;
             }
 
@@ -91,7 +98,7 @@ namespace GM256M
             SaveFileDialog theDialog = new SaveFileDialog();
             theDialog.Title = "Save File Location And Name";
             theDialog.Filter = "MIDI Files|*.mid";
-            theDialog.InitialDirectory = @"C:\";
+            theDialog.RestoreDirectory = true;
             theDialog.ShowDialog();
             out_path = theDialog.FileName;
             if (out_path == "")
@@ -116,19 +123,15 @@ namespace GM256M
             }
             else
             {
+                Status.Content = "Initializing";
                 long totalNotes = 0;
                 MidiFile file = new MidiFile(in_path);
                 BufferedStream outmidi = new BufferedStream(new StreamWriter(out_path).BaseStream);
                 MidiWriter writer = new MidiWriter(outmidi);
 
-                writer.Init();
-
-                writer.WriteFormat(file.Format);
-                writer.WritePPQ(file.PPQ);
-                writer.WriteNtrks((ushort)file.TrackCount);
-                Random rnd = new Random();
+                writer.Init(file.PPQ);
                 progressBar.Maximum = file.TrackCount;
-
+                Status.Content = "Merging";
                 new Thread(() =>
                 {
                     Stopwatch s = new Stopwatch();
@@ -137,7 +140,7 @@ namespace GM256M
                     {
                         Dispatcher.Invoke(() =>
                         {
-                            if (s.ElapsedMilliseconds > 500)
+                            if (s.ElapsedMilliseconds > 35)
                             {
                                 s.Reset();
                                 s.Start();
@@ -146,7 +149,10 @@ namespace GM256M
                                 totalNotesL.Content = "Total Notes: " + totalNotes;
                             }
                         });
-
+                        Dispatcher.Invoke(() =>
+                        {
+                            Status.Content = "Starting track " + i;
+                        });
                         writer.InitTrack();
                         var reader = file.GetTrack(i);
                         foreach (MIDIEvent a in reader)
@@ -159,7 +165,7 @@ namespace GM256M
                                 else
                                     writer.Write(new NoteOnEvent(0, ev.Channel, (byte)(ev.Key + 128), ev.Velocity));
                                 totalNotes += 2;
-                                
+
                             }
                             else if (a is NoteOffEvent)
                             {
@@ -169,9 +175,9 @@ namespace GM256M
                                 else
                                     writer.Write(new NoteOffEvent(0, ev.Channel, (byte)(ev.Key + 128)));
                             }
-                            
+
                             writer.Write(a);
-                            if(stop == true)
+                            if (stop == true)
                             {
                                 return;
                             }
@@ -179,11 +185,19 @@ namespace GM256M
                         }
                         if (stop == true)
                             return;
+                        Dispatcher.Invoke(() =>
+                        {
+                            Status.Content = "Ending track " + i;
+                        });
                         writer.EndTrack();
                     }
                     writer.Close();
-                    MessageBox.Show("Complete!", "Merge Complete.");
-                    resetState();
+                    Thread.Sleep(100);
+                    Dispatcher.Invoke(() =>
+                    {
+                        resetState();
+                        MessageBox.Show("Complete!", "Merge Complete.");
+                    });
                 }).Start();
             }
         }
@@ -191,6 +205,63 @@ namespace GM256M
         private void Button_Click_1(object sender, RoutedEventArgs e)
         {
             stop = true;
+        }
+
+        private void Button_Click_2(object sender, RoutedEventArgs e)
+        {
+            long totalNotes = 0;
+            MidiFile file = new MidiFile(in_path);
+            Random rnd = new Random();
+            checkPoly.IsEnabled = false;
+
+            new Thread(() =>
+            {
+                Stopwatch s = new Stopwatch();
+                s.Start();
+                Dispatcher.Invoke(() =>
+                {
+                    //progressBar.Value = i; //TODO
+                    Status.Content = "Merging tracks for checking";
+                    currentTrack.Content = "Checking Track: N/A";
+                    totalNotesL.Content = "Checked Notes: N/A";
+                });
+                var merge = Mergers.MergeSequences(file.IterateTracks()).ChangePPQ(file.PPQ, 1).CancelTempoEvents(250000);
+                Dispatcher.Invoke(() =>
+                {
+                    Status.Content = "Checking MIDI";
+                });
+                foreach (MIDIEvent a in merge)
+                {
+                    if (s.ElapsedMilliseconds > 200)
+                    {
+                        s.Reset();
+                        s.Start();
+                        Dispatcher.Invoke(() =>
+                        {
+                            totalNotesL.Content = "Checked Notes: " + totalNotes;
+                        });
+                    }
+                    if (a is NoteOnEvent)
+                    {
+                        var ev = (NoteOnEvent)a;
+                        tempPoly++;
+                        if (tempPoly > polyphony) polyphony = tempPoly;
+                        totalNotes += 1;
+
+                    }
+                    else if (a is NoteOffEvent)
+                    {
+                        var ev = (NoteOffEvent)a;
+                        tempPoly--;
+                    }
+                }
+                Thread.Sleep(100);
+                Dispatcher.Invoke(() =>
+                {
+                    MessageBox.Show($"-------{System.IO.Path.GetFileName(in_path)} results-------\nMax polyphony: {polyphony}\nNote Count: {totalNotes}\nPPQ: {file.PPQ}\nTracks: {file.TrackCount}\nFormat: {file.Format}", "Check complete!");
+                    resetState();
+                });
+            }).Start();
         }
     }
 }
