@@ -55,8 +55,8 @@ namespace GM256M
         private void Button_Click(object sender, RoutedEventArgs e)
         {
             OpenFileDialog theDialog = new OpenFileDialog();
-            theDialog.Title = "Load MIDI File";
-            theDialog.Filter = "MIDI Files|*.mid";
+            theDialog.Title = "Load MIDI file";
+            theDialog.Filter = "MIDI files|*.mid";
             theDialog.RestoreDirectory = true;
             theDialog.ShowDialog();
             in_path = theDialog.FileName;
@@ -111,7 +111,7 @@ namespace GM256M
             if (isNull2 == false)
                 saveName.Content = out_path;
             else
-                saveName.Content = "{Select Save Location}";
+                saveName.Content = "{Select save location}";
 
         }
 
@@ -119,7 +119,7 @@ namespace GM256M
         {
             if (isNull2 == true)
             {
-                MessageBox.Show("Please select a save location first!", "Hey!");
+                MessageBox.Show("Please select a save location and filename first!", "Error");
             }
             else
             {
@@ -145,8 +145,8 @@ namespace GM256M
                                 s.Reset();
                                 s.Start();
                                 progressBar.Value = i;
-                                currentTrack.Content = "Working On Track" + i + "/" + file.TrackCount;
-                                totalNotesL.Content = "Total Notes: " + totalNotes;
+                                currentTrack.Content = "Processing track " + i + "/" + file.TrackCount;
+                                totalNotesL.Content = "Total notes: " + totalNotes;
                             }
                         });
                         Dispatcher.Invoke(() =>
@@ -196,7 +196,7 @@ namespace GM256M
                     Dispatcher.Invoke(() =>
                     {
                         resetState();
-                        MessageBox.Show("Complete!", "Merge Complete.");
+                        MessageBox.Show("Complete!", "Merge complete.");
                     });
                 }).Start();
             }
