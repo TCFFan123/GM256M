@@ -46,7 +46,7 @@ namespace GM256M
             out_path = "";
             progressBar.Maximum = 1;
             progressBar.Value = 0;
-            Status.Content = "Doing Nothing";
+            Status.Content = "Inactive. Select a MIDI and a save location to merge at.";
             isNull = true;
             isNull2 = true;
             checkPoly.IsEnabled = false;
@@ -75,7 +75,7 @@ namespace GM256M
             }
             else
             {
-                midiName1.Content = "{Select MIDI}";
+                midiName1.Content = "Select MIDI";
                 checkPoly.IsEnabled = false;
                 start.IsEnabled = false;
             }
@@ -96,8 +96,8 @@ namespace GM256M
         private void SaveLoc_Click(object sender, RoutedEventArgs e)
         {
             SaveFileDialog theDialog = new SaveFileDialog();
-            theDialog.Title = "Save File Location And Name";
-            theDialog.Filter = "MIDI Files|*.mid";
+            theDialog.Title = "Save file location and name";
+            theDialog.Filter = "MIDI files|*.mid";
             theDialog.RestoreDirectory = true;
             theDialog.ShowDialog();
             out_path = theDialog.FileName;
@@ -111,7 +111,7 @@ namespace GM256M
             if (isNull2 == false)
                 saveName.Content = out_path;
             else
-                saveName.Content = "{Select save location}";
+                saveName.Content = "Select save location";
 
         }
 
@@ -238,7 +238,7 @@ namespace GM256M
                         s.Start();
                         Dispatcher.Invoke(() =>
                         {
-                            totalNotesL.Content = "Checked Notes: " + totalNotes;
+                            totalNotesL.Content = "Checked notes: " + totalNotes;
                         });
                     }
                     if (a is NoteOnEvent)
@@ -258,7 +258,7 @@ namespace GM256M
                 Thread.Sleep(100);
                 Dispatcher.Invoke(() =>
                 {
-                    MessageBox.Show($"-------{System.IO.Path.GetFileName(in_path)} results-------\nMax polyphony: {polyphony}\nNote Count: {totalNotes}\nPPQ: {file.PPQ}\nTracks: {file.TrackCount}\nFormat: {file.Format}", "Check complete!");
+                    MessageBox.Show($"-------{System.IO.Path.GetFileName(in_path)} results-------\nMax polyphony: {polyphony}\nNote count: {totalNotes}\nPPQ: {file.PPQ}\nTracks: {file.TrackCount}\nFormat: {file.Format}", "Check complete!");
                     resetState();
                 });
             }).Start();
